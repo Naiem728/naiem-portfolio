@@ -196,9 +196,103 @@
   .footer-bottom{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);}
 
   @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none !important;}}
+
+  /* ---------- INTRO MOTION GRAPHIC ---------- */
+  html.intro-lock{overflow:hidden;}
+  #intro{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(34,211,238,0.10), transparent 55%),
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px) 0 0/48px 48px,
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px) 0 0/48px 48px,
+      var(--bg);
+    transition:opacity .8s ease, visibility .8s ease, transform .8s ease;}
+  #intro.hide{opacity:0;visibility:hidden;transform:scale(1.04);}
+  .intro-lattice{width:min(420px,82vw);height:auto;overflow:visible;filter:drop-shadow(0 0 14px rgba(34,211,238,0.35));animation:introFloat 6s ease-in-out infinite;}
+  .intro-lattice .bond{stroke:#22D3EE;stroke-width:1.5;stroke-linecap:round;opacity:.6;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:introDraw .7s ease forwards;animation-delay:var(--d);}
+  .intro-lattice .atom{fill:#22D3EE;opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(0);animation:introPop .55s cubic-bezier(.2,1.5,.4,1) forwards;animation-delay:var(--d);}
+  .intro-lattice .atom.alt{fill:#A78BFA;}
+  .intro-lattice .atom.pulse{animation:introPop .55s cubic-bezier(.2,1.5,.4,1) forwards, introGlow 1.8s ease-in-out infinite;animation-delay:var(--d), 1.8s;}
+  .intro-tag{font-family:var(--font-mono);font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:var(--cyan);opacity:0;animation:introUp .7s ease forwards;animation-delay:1.5s;text-align:center;padding:0 20px;}
+  .intro-name{font-family:var(--font-display);font-weight:700;font-size:clamp(22px,4.5vw,34px);letter-spacing:0.04em;opacity:0;animation:introUp .7s ease forwards;animation-delay:2s;text-align:center;padding:0 20px;margin-top:-14px;}
+  .intro-bar{width:min(220px,50vw);height:2px;background:var(--line);border-radius:2px;overflow:hidden;opacity:0;animation:introUp .5s ease forwards;animation-delay:2.2s;}
+  .intro-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--purple));animation:introBar 2s ease forwards;animation-delay:2.3s;}
+  .intro-skip{position:absolute;right:22px;bottom:22px;background:none;border:1px solid var(--line);color:var(--text-dim);font-family:var(--font-mono);font-size:12px;letter-spacing:0.08em;padding:8px 14px;border-radius:20px;cursor:pointer;}
+  .intro-skip:hover{color:var(--cyan);border-color:var(--cyan);}
+  @keyframes introDraw{to{stroke-dashoffset:0}}
+  @keyframes introPop{to{opacity:1;transform:scale(1)}}
+  @keyframes introGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.8)}}
+  @keyframes introUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes introBar{to{width:100%}}
+  @keyframes introFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+  @media (prefers-reduced-motion:reduce){#intro{display:none !important;}}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true">
+  <svg class="intro-lattice" id="introLattice" viewBox="0 0 400 330" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div class="intro-tag">Materials Science &amp; Engineering</div>
+  <div class="intro-name">MD. ABDUL HI NAIEM</div>
+  <div class="intro-bar"><i></i></div>
+  <button class="intro-skip" id="introSkip" type="button">SKIP ›</button>
+</div>
+<script>
+(function(){
+  var root=document.documentElement;
+  var intro=document.getElementById('intro');
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){ if(intro) intro.remove(); return; }
+  root.classList.add('intro-lock');
+
+  // Build a honeycomb (graphene-like) crystal lattice
+  var svg=document.getElementById('introLattice'), NS='http://www.w3.org/2000/svg';
+  var s=34, w=Math.sqrt(3)*s, cols=5, rows=5, ox=200-(cols*w)/2+w/4, oy=165-((rows-1)*1.5*s)/2;
+  var nodes={}, edges={}, list=[];
+  function key(x,y){return Math.round(x)+','+Math.round(y);}
+  for(var r=0;r<rows;r++){
+    for(var c=0;c<cols;c++){
+      var cx=ox+c*w+(r%2?w/2:0)+w/2, cy=oy+r*1.5*s, pts=[];
+      for(var k=0;k<6;k++){
+        var a=(Math.PI/180)*(30+60*k), x=cx+s*Math.cos(a), y=cy+s*Math.sin(a), kk=key(x,y);
+        if(!nodes[kk]){nodes[kk]={x:x,y:y}; list.push(kk);}
+        pts.push(kk);
+      }
+      for(var k=0;k<6;k++){
+        var A=pts[k], B=pts[(k+1)%6], ek=A<B?A+'|'+B:B+'|'+A;
+        edges[ek]=[A,B];
+      }
+    }
+  }
+  function dist(n){return Math.hypot(n.x-200,n.y-165);}
+  var maxD=0; list.forEach(function(k){maxD=Math.max(maxD,dist(nodes[k]));});
+  function delay(n){return (dist(n)/maxD)*1.2+0.1;}
+  Object.keys(edges).forEach(function(ek){
+    var a=nodes[edges[ek][0]], b=nodes[edges[ek][1]];
+    var l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',a.x);l.setAttribute('y1',a.y);l.setAttribute('x2',b.x);l.setAttribute('y2',b.y);
+    l.setAttribute('class','bond');
+    l.style.setProperty('--len',Math.hypot(a.x-b.x,a.y-b.y).toFixed(1));
+    l.style.setProperty('--d',(Math.max(delay(a),delay(b))+0.1).toFixed(2)+'s');
+    svg.appendChild(l);
+  });
+  list.forEach(function(k,i){
+    var n=nodes[k], c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',n.x);c.setAttribute('cy',n.y);c.setAttribute('r',i%5===0?6:4.5);
+    c.setAttribute('class','atom'+(i%4===0?' alt':'')+(i%7===0?' pulse':''));
+    c.style.setProperty('--d',delay(n).toFixed(2)+'s');
+    svg.appendChild(c);
+  });
+
+  var done=false;
+  function finish(){
+    if(done) return; done=true;
+    intro.classList.add('hide');
+    root.classList.remove('intro-lock');
+    setTimeout(function(){ if(intro&&intro.parentNode) intro.parentNode.removeChild(intro); },900);
+  }
+  document.getElementById('introSkip').addEventListener('click',finish);
+  setTimeout(finish,4600);
+})();
+</script>
+
 
 <header>
   <nav class="wrap">
